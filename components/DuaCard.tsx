@@ -48,7 +48,7 @@ export function DuaCard({
   };
 
   return (
-    <article className="glass-card p-5 transition-all">
+    <article className="glass-card p-4 sm:p-5 transition-all">
       <span className="inline-block px-2 py-0.5 text-xs font-medium rounded bg-cmu-red/20 text-cmu-red mb-2">
         {dua.category}
       </span>
@@ -68,7 +68,7 @@ export function DuaCard({
           type="button"
           onClick={handleAddCurrent}
           disabled={inCurrentList}
-          className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+          className={`touch-manipulation px-3 py-1.5 text-sm rounded-lg transition-colors ${
             inCurrentList
               ? "bg-green-600/20 text-green-400 cursor-default"
               : justAdded === "current"
@@ -82,7 +82,7 @@ export function DuaCard({
           type="button"
           onClick={handleAddComprehensive}
           disabled={inComprehensiveList}
-          className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+          className={`touch-manipulation px-3 py-1.5 text-sm rounded-lg transition-colors ${
             inComprehensiveList
               ? "bg-green-600/20 text-green-400 cursor-default"
               : justAdded === "comprehensive"

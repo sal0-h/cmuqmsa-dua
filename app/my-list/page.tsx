@@ -93,7 +93,7 @@ export default function MyListPage() {
   const ids = mounted ? getStoredIds(tab === "current" ? "current" : "comprehensive") : [];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <h1 className="text-2xl font-bold text-slate-100 mb-4">My List</h1>
 
       <div className="flex gap-2 mb-6">

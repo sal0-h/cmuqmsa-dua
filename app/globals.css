@@ -24,3 +24,11 @@
 .font-arabic {
   font-family: var(--font-arabic), "Noto Naskh Arabic", serif;
 }
+
+/* Safe area for notched phones */
+.safe-area-inset-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}

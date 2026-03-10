@@ -24,7 +24,7 @@ export function FilterBar({
   const quickCats = categories.slice(0, QUICK_CATEGORY_COUNT);
 
   return (
-    <div className="w-full sticky top-14 z-10 bg-slate-900/95 backdrop-blur-sm px-6 py-3">
+    <div className="w-full sticky top-14 z-10 bg-slate-900/95 backdrop-blur-sm px-4 sm:px-6 py-3">
       <div className="flex flex-col gap-3">
         <input
           type="search"

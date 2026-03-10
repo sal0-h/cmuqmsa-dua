@@ -92,7 +92,7 @@ export default function BrowsePage() {
         onSortChange={setSort}
         onSearchChange={handleSearchChange}
       />
-      <div className="max-w-4xl mx-auto px-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
       {loading ? (
         <p className="text-slate-400 py-8 text-center">Loading duas...</p>
       ) : duas.length === 0 ? (
