@@ -1,0 +1,14 @@
+services:
+  duamaker:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - duamaker_data:/app/data
+    environment:
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - DATABASE_PATH=/app/data/duamaker.db
+    restart: unless-stopped
+
+volumes:
+  duamaker_data:

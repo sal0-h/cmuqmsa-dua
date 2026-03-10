@@ -1,0 +1,33 @@
+# Role and Objective
+You are a senior full-stack developer. Your objective is to build a lean MVP for a web application called "DuaMaker". The platform is a community-driven Islamic supplication (Dua) database. 
+
+# Tech Stack
+* **Frontend:** Next.js (App Router), React, Tailwind CSS.
+* **Backend & Database:** Supabase (PostgreSQL).
+* **State Management:** Browser LocalStorage (for saving user lists without requiring accounts).
+
+# Core Database Schema Requirements
+Design a simple PostgreSQL schema:
+1.  **Duas Table:** ID, Title, Arabic text, Translation, Transliteration, Commentary/Virtues, Source,Category, Status (String: 'Pending' or 'Approved'), Popularity_Score (Integer, default 0), Created_At.
+2.  (No user tables or authentication tables are needed for this MVP).
+
+# Feature Requirements to Implement
+
+## 1. Search & Discovery (Public, No Login Required)
+* **Browsing UI:** Users can view Duas. Include filtering by Category (e.g., Exams, Marriage, Health) and sorting options: By Date Added (Newest) and By Popularity.
+* **Personal Lists (Local Storage):** Users can click to add a Dua to their "Current List" or "Comprehensive List". These lists must be saved in the browser's LocalStorage so they persist upon page reload.
+* **The "Devious Stats" (Telemetry):** Whenever a user adds a Dua to one of their local lists, fire a background API request to increment the `Popularity_Score` for that specific Dua in the Supabase database.
+
+## 2. Community Submissions (Public, No Login Required)
+* Create a simple "Submit a Dua" form where anyone can input the Arabic, translation, and category of a missing Dua.
+* Submissions are inserted into the database with the Status set to 'Pending'. They should NOT appear on the public browsing pages.
+
+## 3. Admin Dashboard
+* Create a hidden route (e.g., `/admin-dashboard`).
+* **Simple Auth:** Protect this route with a simple, hardcoded environment variable password check. No complex auth providers—just a single shared password input to enter the page.
+* **Approval Queue:** A UI where the admin can view 'Pending' Duas, edit them for typos or accuracy, and click "Approve" (changes status to 'Approved', making it publicly visible) or "Reject" (deletes the row).
+
+## 4. LaTeX Export
+* On the page where the user views their local "Current" or "Comprehensive" list, add a "Download as .tex" button.
+* Create a utility function that formats their saved Duas into a cleanly structured, compilable LaTeX string and triggers a file download.
+* Also make it possible to download the list as a PDF.

@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-cmu-red: #C41230;
+  --color-cmu-gold: #F2A900;
+  --font-sans: var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-arabic: var(--font-arabic), "Noto Naskh Arabic", serif;
+}
+
+/* Glassmorphism utilities */
+.glass-bar {
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-card {
+  background: rgba(30, 41, 59, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 0.75rem;
+}
+
+.font-arabic {
+  font-family: var(--font-arabic), "Noto Naskh Arabic", serif;
+}
