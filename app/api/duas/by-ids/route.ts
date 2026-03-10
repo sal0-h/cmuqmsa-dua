@@ -10,10 +10,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json([]);
     }
 
-    const placeholders = ids.map((_, i) => `$${i + 1}`).join(", ");
+    const MAX_IDS = 500;
+    const limited = ids.slice(0, MAX_IDS).filter((id) => typeof id === "string");
+
+    const placeholders = limited.map((_, i) => `$${i + 1}`).join(", ");
     const rows = await query(
       `SELECT * FROM duas WHERE status = 'Approved' AND id IN (${placeholders})`,
-      ids
+      limited
     );
 
     return NextResponse.json(rows);

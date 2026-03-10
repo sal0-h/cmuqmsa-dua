@@ -4,31 +4,15 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { DuaCard } from "@/components/DuaCard";
 import { FilterBar } from "@/components/FilterBar";
 import type { Dua } from "@/lib/db";
-
-const STORAGE_KEYS = {
-  current: "duamaker_current_list",
-  comprehensive: "duamaker_comprehensive_list",
-} as const;
-
-function getStoredIds(key: keyof typeof STORAGE_KEYS): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS[key]);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function addToStoredList(key: keyof typeof STORAGE_KEYS, id: string): boolean {
-  const ids = getStoredIds(key);
-  if (ids.includes(id)) return false;
-  ids.push(id);
-  localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(ids));
-  return true;
-}
+import {
+  STORAGE_KEYS,
+  getStoredIds,
+  addToStoredList,
+  markVoted,
+} from "@/lib/storage";
 
 function fireVote(id: string) {
+  if (!markVoted(id)) return; // already voted for this dua
   fetch(`/api/duas/${id}/vote`, { method: "POST" }).catch(() => {});
 }
 
@@ -57,14 +41,19 @@ export default function BrowsePage() {
 
   const fetchDuas = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (category) params.set("category", category);
-    params.set("sort", sort);
-    if (debouncedSearch) params.set("search", debouncedSearch);
-    const res = await fetch(`/api/duas?${params}`);
-    const data = await res.json();
-    if (Array.isArray(data)) setDuas(data);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (category) params.set("category", category);
+      params.set("sort", sort);
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      const res = await fetch(`/api/duas?${params}`);
+      const data = await res.json();
+      if (Array.isArray(data)) setDuas(data);
+    } catch {
+      setDuas([]);
+    } finally {
+      setLoading(false);
+    }
   }, [category, sort, debouncedSearch]);
 
   useEffect(() => {

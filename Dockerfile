@@ -11,13 +11,22 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Production stage - minimal image
-FROM node:22-alpine AS runner
+# Production stage - Debian for texlive + Amiri font
+FROM node:22-bookworm-slim AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Install xelatex and Amiri font for PDF export
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    texlive-xetex \
+    texlive-fonts-recommended \
+    fonts-amiri \
+    fontconfig \
+    && fc-cache -f \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs

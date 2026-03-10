@@ -11,11 +11,11 @@
     "merge-categories": "npx tsx scripts/merge-categories.ts",
     "dedupe-duas": "npx tsx scripts/dedupe-duas.ts",
     "analyze-close-dupes": "npx tsx scripts/analyze-close-dupes.ts",
-    "merge-close-dupes": "npx tsx scripts/merge-close-dupes.ts"
+    "merge-close-dupes": "npx tsx scripts/merge-close-dupes.ts",
+    "test-latex": "npx tsx scripts/test-latex.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.6.2",
-    "jspdf": "^4.2.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"

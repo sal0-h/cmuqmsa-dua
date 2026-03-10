@@ -5,24 +5,17 @@ export function formatDuasAsLatex(duas: Dua[]): string {
     .map(
       (d) => `
 \\begin{dua}
-\\textbf{${escapeLatex(d.title)}} \\quad \\textcolor{gray}{[${escapeLatex(d.category)}]}
-
-\\begin{arabic}
-${d.arabic_text}
-\\end{arabic}
-
-${d.transliteration ? `\\textit{${escapeLatex(d.transliteration)}}\\\\` : ""}
-
+{\\bfseries ${escapeLatex(d.title)}} \\hfill {\\small\\textcolor{gray}{[${escapeLatex(d.category)}]}}\\\\[0.4em]
+{\\large\\textarabic{${escapeLatex(d.arabic_text)}}}\\\\[0.3em]
+${d.transliteration ? `{\\itshape ${escapeLatex(d.transliteration)}}\\\\[0.2em]` : ""}
 ${escapeLatex(d.translation)}
-
-${d.source ? `\\small \\textit{Source: ${escapeLatex(d.source)}}` : ""}
+${d.source ? `\\\\[0.2em]{\\small\\itshape Source: ${escapeLatex(d.source)}}` : ""}
 \\end{dua}
 `
     )
     .join("\n");
 
   return `\\documentclass[12pt]{article}
-\\usepackage[utf8]{inputenc}
 \\usepackage{polyglossia}
 \\setmainlanguage{english}
 \\setotherlanguage{arabic}
@@ -32,22 +25,21 @@ ${d.source ? `\\small \\textit{Source: ${escapeLatex(d.source)}}` : ""}
 \\usepackage{xcolor}
 \\usepackage{enumitem}
 
+\\setlength{\\parskip}{0.8em}
+
 \\newenvironment{dua}{%
-  \\begin{itemize}[leftmargin=0pt]
-  \\item[]
+  \\par\\noindent
+  \\rule{\\textwidth}{0.4pt}\\\\[0.6em]
 }{%
-  \\end{itemize}
-  \\vspace{0.5em}
+  \\vspace{1.2em}
 }
 
-\\title{Dua List}
-\\author{DuaMaker}
-\\date{\\today}
-
 \\begin{document}
-\\maketitle
-\\tableofcontents
-\\newpage
+\\centering
+{\\LARGE\\bfseries Dua List}\\\\[0.5em]
+{\\small DuaMaker \\quad $|$ \\quad \\today}
+\\vspace{1.5em}
+\\raggedright
 
 ${items}
 

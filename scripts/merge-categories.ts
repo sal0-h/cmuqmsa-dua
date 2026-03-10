@@ -4,6 +4,7 @@
  */
 
 import Database from "better-sqlite3";
+import { randomUUID } from "crypto";
 import { join } from "path";
 import { existsSync } from "fs";
 
@@ -34,7 +35,6 @@ const MERGES: Merge[] = [
 function ensureCategory(name: string): void {
   const existing = db.prepare("SELECT 1 FROM categories WHERE name = ?").get(name);
   if (!existing) {
-    const { randomUUID } = require("crypto");
     const maxOrder =
       (db.prepare("SELECT COALESCE(MAX(display_order), -1) + 1 as m FROM categories").get() as { m: number })?.m ?? 0;
     db.prepare("INSERT INTO categories (id, name, display_order) VALUES (?, ?, ?)").run(

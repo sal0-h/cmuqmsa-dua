@@ -66,10 +66,12 @@ function main() {
   }>;
   const transSeen = new Map<string, string>();
   for (const row of transRows) {
+    if (toDelete.includes(row.id)) continue;
     const key = (row.translation || "").trim();
     if (!key) continue;
     const existingId = transSeen.get(key);
-    if (existingId && existingId !== row.id && !toDelete.includes(row.id)) {
+    if (existingId && existingId !== row.id) {
+      if (toDelete.includes(existingId)) continue; // existing already marked for deletion
       const existing = transRows.find((r) => r.id === existingId)!;
       const keep = existing.title.length >= row.title.length ? existingId : row.id;
       const del = keep === existingId ? row.id : existingId;

@@ -40,6 +40,13 @@ export function Header() {
               {label}
             </Link>
           ))}
+          <Link
+            href="/admin-dashboard"
+            className="px-3 py-2 rounded-md text-xs text-slate-600 hover:text-slate-500 transition-colors"
+            aria-label="Admin"
+          >
+            Admin
+          </Link>
         </div>
       </nav>
     </header>

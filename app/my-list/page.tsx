@@ -3,27 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import type { Dua } from "@/lib/db";
 import { triggerLatexDownload } from "@/lib/latex";
-import { generatePDF } from "@/lib/pdf";
-
-const STORAGE_KEYS = {
-  current: "duamaker_current_list",
-  comprehensive: "duamaker_comprehensive_list",
-} as const;
-
-function getStoredIds(key: string): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function removeFromStoredList(key: string, id: string) {
-  const ids = getStoredIds(key).filter((x) => x !== id);
-  localStorage.setItem(key, JSON.stringify(ids));
-}
+import Link from "next/link";
+import {
+  STORAGE_KEYS,
+  getStoredIds,
+  removeFromStoredList,
+} from "@/lib/storage";
 
 type Tab = "current" | "comprehensive";
 
@@ -32,13 +17,14 @@ export default function MyListPage() {
   const [tab, setTab] = useState<Tab>("current");
   const [duas, setDuas] = useState<Dua[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const fetchDuas = useCallback(async () => {
-    const key = tab === "current" ? STORAGE_KEYS.current : STORAGE_KEYS.comprehensive;
+    const key = tab === "current" ? "current" : "comprehensive";
     const ids = getStoredIds(key);
     if (ids.length === 0) {
       setDuas([]);
@@ -46,14 +32,19 @@ export default function MyListPage() {
       return;
     }
     setLoading(true);
-    const res = await fetch("/api/duas/by-ids", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids }),
-    });
-    const data = await res.json();
-    setDuas(Array.isArray(data) ? data : []);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/duas/by-ids", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json();
+      setDuas(Array.isArray(data) ? data : []);
+    } catch {
+      setDuas([]);
+    } finally {
+      setLoading(false);
+    }
   }, [tab]);
 
   useEffect(() => {
@@ -61,7 +52,7 @@ export default function MyListPage() {
   }, [fetchDuas]);
 
   const handleRemove = (id: string) => {
-    const key = tab === "current" ? STORAGE_KEYS.current : STORAGE_KEYS.comprehensive;
+    const key = tab === "current" ? "current" : "comprehensive";
     removeFromStoredList(key, id);
     setDuas((prev) => prev.filter((d) => d.id !== id));
   };
@@ -71,10 +62,35 @@ export default function MyListPage() {
   };
 
   const handleDownloadPdf = async () => {
-    await generatePDF(duas, `dua-list-${tab}.pdf`);
+    const ids = duas.map((d) => d.id);
+    if (ids.length === 0) return;
+    setPdfLoading(true);
+    try {
+      const res = await fetch("/api/export/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Failed to generate PDF");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `dua-list-${tab}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Failed to generate PDF");
+    } finally {
+      setPdfLoading(false);
+    }
   };
 
-  const ids = mounted ? getStoredIds(tab === "current" ? STORAGE_KEYS.current : STORAGE_KEYS.comprehensive) : [];
+  const ids = mounted ? getStoredIds(tab === "current" ? "current" : "comprehensive") : [];
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -104,7 +120,10 @@ export default function MyListPage() {
       {ids.length === 0 ? (
         <p className="text-slate-400 py-8">
           No duas in your {tab === "current" ? "Current" : "Comprehensive"} list.{" "}
-          <a href="/" className="text-cmu-red hover:underline">Browse</a> and add some!
+          <Link href="/" className="text-cmu-red hover:underline">
+            Browse
+          </Link>{" "}
+          and add some!
         </p>
       ) : (
         <>
@@ -120,10 +139,10 @@ export default function MyListPage() {
             <button
               type="button"
               onClick={handleDownloadPdf}
-              disabled={loading || duas.length === 0}
+              disabled={loading || duas.length === 0 || pdfLoading}
               className="px-4 py-2 rounded-lg bg-cmu-gold/20 text-cmu-gold hover:bg-cmu-gold/30 disabled:opacity-50 transition-colors"
             >
-              Download as PDF
+              {pdfLoading ? "Generating…" : "Download as PDF"}
             </button>
           </div>
 

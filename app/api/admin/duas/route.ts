@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query, run, generateId } from "@/lib/db";
-
-function checkAdminAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get("authorization");
-  const password = authHeader?.replace("Bearer ", "");
-  return password === process.env.ADMIN_PASSWORD;
-}
+import { checkAdminAuth } from "@/lib/admin-auth";
 
 export async function GET(request: NextRequest) {
   if (!checkAdminAuth(request)) {
@@ -21,11 +16,8 @@ export async function GET(request: NextRequest) {
         : "SELECT * FROM duas WHERE status = 'Pending' ORDER BY created_at DESC";
     const rows = await query(sql);
     return NextResponse.json(rows);
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Server error" },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
@@ -44,6 +36,15 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const MAX_LEN = { title: 500, arabic_text: 5000, translation: 2000, transliteration: 2000, commentary: 2000, source: 500 };
+    const s = (v: unknown) => (typeof v === "string" ? v : "");
+    if (s(title).length > MAX_LEN.title) return NextResponse.json({ error: "Title too long" }, { status: 400 });
+    if (s(arabic_text).length > MAX_LEN.arabic_text) return NextResponse.json({ error: "Arabic text too long" }, { status: 400 });
+    if (s(translation).length > MAX_LEN.translation) return NextResponse.json({ error: "Translation too long" }, { status: 400 });
+    if (s(transliteration).length > MAX_LEN.transliteration) return NextResponse.json({ error: "Transliteration too long" }, { status: 400 });
+    if (s(commentary).length > MAX_LEN.commentary) return NextResponse.json({ error: "Commentary too long" }, { status: 400 });
+    if (s(source).length > MAX_LEN.source) return NextResponse.json({ error: "Source too long" }, { status: 400 });
 
     const validCats = await query<{ name: string }>("SELECT name FROM categories");
     const validNames = new Set(validCats.map((r) => r.name));
@@ -72,10 +73,7 @@ export async function POST(request: NextRequest) {
     );
 
     return NextResponse.json({ success: true, id });
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Invalid request body" },
-      { status: 400 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 }

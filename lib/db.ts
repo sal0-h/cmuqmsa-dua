@@ -39,6 +39,10 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   )
 `);
+db.exec("CREATE INDEX IF NOT EXISTS idx_duas_status ON duas(status)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_duas_status_category ON duas(status, category)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_duas_status_popularity ON duas(status, popularity_score DESC)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_duas_created_at ON duas(created_at DESC)");
 
 // Seed default categories if empty
 const catCount = db.prepare("SELECT COUNT(*) as n FROM categories").get() as { n: number };
@@ -71,9 +75,13 @@ export function query<T = unknown>(sql: string, params: unknown[] = []): Promise
   return Promise.resolve(stmt.all(...params) as T[]);
 }
 
-export function run(sql: string, params: unknown[] = []): Promise<{ lastInsertRowid: number }> {
+export function run(
+  sql: string,
+  params: unknown[] = []
+): Promise<{ changes: number; lastInsertRowid: bigint }> {
   const stmt = db.prepare(toSqlitePlaceholders(sql));
-  return Promise.resolve(stmt.run(...params) as { lastInsertRowid: number });
+  const result = stmt.run(...params) as { changes: number; lastInsertRowid: bigint };
+  return Promise.resolve(result);
 }
 
 export function generateId(): string {

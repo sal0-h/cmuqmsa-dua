@@ -3,6 +3,10 @@ node_modules
 data
 .git
 .gitignore
+.env
+.env.local
+.env.development
+.env.production
 .env*.local
 *.log
 .DS_Store

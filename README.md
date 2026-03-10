@@ -99,5 +99,5 @@ npm run seed && npm run merge-categories && npm run dedupe-duas && npm run analy
 - **Browse** – View approved duas, filter by category, sort by newest or popularity
 - **Personal lists** – Add duas to Current or Comprehensive list (LocalStorage)
 - **Submit** – Public form to submit new duas (pending until admin approval)
-- **My List** – View saved duas, download as `.tex` or PDF
+- **My List** – View saved duas, download as `.tex` or PDF (PDF compiles LaTeX server-side with xelatex; Docker image includes texlive + Amiri font)
 - **Admin** – Hidden route `/admin-dashboard` to approve/reject/edit pending submissions

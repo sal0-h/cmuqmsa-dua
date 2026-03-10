@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Dua } from "@/lib/db";
 
 type DuaCardProps = {
@@ -19,19 +19,32 @@ export function DuaCard({
   onAddToComprehensive,
 }: DuaCardProps) {
   const [justAdded, setJustAdded] = useState<"current" | "comprehensive" | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }, []);
 
   const handleAddCurrent = () => {
     if (inCurrentList) return;
     onAddToCurrent(dua.id);
     setJustAdded("current");
-    setTimeout(() => setJustAdded(null), 1500);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      setJustAdded(null);
+    }, 1500);
   };
 
   const handleAddComprehensive = () => {
     if (inComprehensiveList) return;
     onAddToComprehensive(dua.id);
     setJustAdded("comprehensive");
-    setTimeout(() => setJustAdded(null), 1500);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      setJustAdded(null);
+    }, 1500);
   };
 
   return (

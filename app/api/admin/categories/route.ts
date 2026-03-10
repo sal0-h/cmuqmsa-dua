@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query, run, generateId } from "@/lib/db";
-
-function checkAdminAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get("authorization");
-  const password = authHeader?.replace("Bearer ", "");
-  return password === process.env.ADMIN_PASSWORD;
-}
+import { checkAdminAuth } from "@/lib/admin-auth";
 
 export async function GET(request: NextRequest) {
   if (!checkAdminAuth(request)) {
@@ -16,11 +11,8 @@ export async function GET(request: NextRequest) {
       "SELECT id, name, display_order FROM categories ORDER BY display_order, name"
     );
     return NextResponse.json(rows);
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Server error" },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
@@ -38,11 +30,8 @@ export async function POST(request: NextRequest) {
     const maxOrder = (await query<{ m: number }>("SELECT COALESCE(MAX(display_order), -1) + 1 as m FROM categories"))[0]?.m ?? 0;
     await run("INSERT INTO categories (id, name, display_order) VALUES ($1, $2, $3)", [id, name.trim(), maxOrder]);
     return NextResponse.json({ id, name: name.trim() });
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Server error" },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
@@ -54,12 +43,17 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+    const count = await query<{ n: number }>("SELECT COUNT(*) as n FROM duas WHERE category = (SELECT name FROM categories WHERE id = $1)", [id]);
+    const n = count[0]?.n ?? 0;
+    if (n > 0) {
+      return NextResponse.json(
+        { error: `Cannot delete: ${n} dua(s) use this category. Reassign them first.` },
+        { status: 400 }
+      );
+    }
     await run("DELETE FROM categories WHERE id = $1", [id]);
     return NextResponse.json({ success: true });
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Server error" },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

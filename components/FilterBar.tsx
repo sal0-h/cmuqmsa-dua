@@ -1,6 +1,6 @@
 "use client";
 
-const QUICK_CATEGORIES = ["General", "Salaah", "Post-Salah", "Travel", "Daily Adhkar", "Eating & Drinking"];
+const QUICK_CATEGORY_COUNT = 6;
 
 type FilterBarProps = {
   categories: string[];
@@ -21,7 +21,7 @@ export function FilterBar({
   onSortChange,
   onSearchChange,
 }: FilterBarProps) {
-  const quickCats = QUICK_CATEGORIES.filter((c) => categories.includes(c));
+  const quickCats = categories.slice(0, QUICK_CATEGORY_COUNT);
 
   return (
     <div className="w-full sticky top-14 z-10 bg-slate-900/95 backdrop-blur-sm px-6 py-3">

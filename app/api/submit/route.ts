@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { run, query, generateId } from "@/lib/db";
 
+const MAX_LEN = { title: 500, arabic_text: 5000, translation: 2000, transliteration: 2000, commentary: 2000, source: 500 };
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -12,6 +14,14 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const s = (v: unknown) => (typeof v === "string" ? v : "");
+    if (s(title).length > MAX_LEN.title) return NextResponse.json({ error: "Title too long" }, { status: 400 });
+    if (s(arabic_text).length > MAX_LEN.arabic_text) return NextResponse.json({ error: "Arabic text too long" }, { status: 400 });
+    if (s(translation).length > MAX_LEN.translation) return NextResponse.json({ error: "Translation too long" }, { status: 400 });
+    if (s(transliteration).length > MAX_LEN.transliteration) return NextResponse.json({ error: "Transliteration too long" }, { status: 400 });
+    if (s(commentary).length > MAX_LEN.commentary) return NextResponse.json({ error: "Commentary too long" }, { status: 400 });
+    if (s(source).length > MAX_LEN.source) return NextResponse.json({ error: "Source too long" }, { status: 400 });
 
     const validCats = await query<{ name: string }>("SELECT name FROM categories");
     const validNames = new Set(validCats.map((r) => r.name));

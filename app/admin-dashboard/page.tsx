@@ -6,15 +6,15 @@ import Link from "next/link";
 
 type Category = { id: string; name: string; display_order: number };
 
-const AUTH_KEY = "duamaker_admin_password";
+const AUTH_KEY = "duamaker_admin_token";
 
-function getAuthPassword(): string | null {
+function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
   return sessionStorage.getItem(AUTH_KEY);
 }
 
-function setAuthPassword(password: string) {
-  sessionStorage.setItem(AUTH_KEY, password);
+function setAuthToken(token: string) {
+  sessionStorage.setItem(AUTH_KEY, token);
 }
 
 function clearAuth() {
@@ -22,8 +22,8 @@ function clearAuth() {
 }
 
 function authHeaders(): Record<string, string> {
-  const p = getAuthPassword();
-  return p ? { Authorization: `Bearer ${p}` } : {};
+  const t = getAuthToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
 }
 
 export default function AdminDashboardPage() {
@@ -47,10 +47,11 @@ export default function AdminDashboardPage() {
     source: "",
     category: "",
   });
-  const [addStatus, setAddStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [addStatus, setAddStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [actionId, setActionId] = useState<string | null>(null);
 
   const checkAuth = useCallback(() => {
-    setAuthenticated(!!getAuthPassword());
+    setAuthenticated(!!getAuthToken());
   }, []);
 
   useEffect(() => {
@@ -66,8 +67,8 @@ export default function AdminDashboardPage() {
       body: JSON.stringify({ password }),
     });
     const data = await res.json();
-    if (res.ok && data.success) {
-      setAuthPassword(password);
+    if (res.ok && data.success && data.token) {
+      setAuthToken(data.token);
       setAuthenticated(true);
       setPassword("");
     } else {
@@ -76,7 +77,7 @@ export default function AdminDashboardPage() {
   };
 
   const fetchDuas = useCallback(async () => {
-    if (!getAuthPassword()) return;
+    if (!getAuthToken()) return;
     setLoading(true);
     const res = await fetch(`/api/admin/duas?status=${statusFilter}`, { headers: authHeaders() });
     const data = await res.json();
@@ -87,7 +88,7 @@ export default function AdminDashboardPage() {
   }, [statusFilter]);
 
   const fetchCategories = useCallback(async () => {
-    if (!getAuthPassword()) return;
+    if (!getAuthToken()) return;
     const res = await fetch("/api/admin/categories", { headers: authHeaders() });
     const data = await res.json();
     if (res.ok && Array.isArray(data)) setCategories(data);
@@ -119,7 +120,12 @@ export default function AdminDashboardPage() {
       method: "DELETE",
       headers: authHeaders(),
     });
-    if (res.ok) fetchCategories();
+    if (res.ok) {
+      fetchCategories();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Failed to delete");
+    }
   };
 
   const startEdit = (dua: Dua) => {
@@ -142,34 +148,49 @@ export default function AdminDashboardPage() {
 
   const saveEdit = async () => {
     if (!editingId) return;
-    const res = await fetch(`/api/admin/duas/${editingId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify(editForm),
-    });
-    if (res.ok) {
-      setEditingId(null);
-      setEditForm({});
-      fetchDuas();
+    setActionId(editingId);
+    try {
+      const res = await fetch(`/api/admin/duas/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(editForm),
+      });
+      if (res.ok) {
+        setEditingId(null);
+        setEditForm({});
+        fetchDuas();
+      }
+    } finally {
+      setActionId(null);
     }
   };
 
   const approve = async (id: string) => {
-    const res = await fetch(`/api/admin/duas/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ status: "Approved" }),
-    });
-    if (res.ok) fetchDuas();
+    setActionId(id);
+    try {
+      const res = await fetch(`/api/admin/duas/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ status: "Approved" }),
+      });
+      if (res.ok) fetchDuas();
+    } finally {
+      setActionId(null);
+    }
   };
 
   const deleteDua = async (id: string) => {
     if (!confirm("Delete this dua? This cannot be undone.")) return;
-    const res = await fetch(`/api/admin/duas/${id}`, {
-      method: "DELETE",
-      headers: authHeaders(),
-    });
-    if (res.ok) fetchDuas();
+    setActionId(id);
+    try {
+      const res = await fetch(`/api/admin/duas/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (res.ok) fetchDuas();
+    } finally {
+      setActionId(null);
+    }
   };
 
   const handleAddDua = async (e: React.FormEvent) => {
@@ -190,7 +211,7 @@ export default function AdminDashboardPage() {
       if (res.ok) {
         setAddForm({ title: "", arabic_text: "", translation: "", transliteration: "", commentary: "", source: "", category: "" });
         setShowAddForm(false);
-        setAddStatus("success");
+        setAddStatus("idle");
         fetchDuas();
       } else {
         const data = await res.json();
@@ -321,60 +342,88 @@ export default function AdminDashboardPage() {
         {showAddForm && (
           <form onSubmit={handleAddDua} className="glass-card p-5 mb-6 space-y-3">
             <h3 className="text-slate-200 font-medium">Add new dua</h3>
-            <input
-              value={addForm.title}
-              onChange={(e) => setAddForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder="Title *"
-              required
-              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
-            />
-            <textarea
-              value={addForm.arabic_text}
-              onChange={(e) => setAddForm((f) => ({ ...f, arabic_text: e.target.value }))}
-              dir="rtl"
-              rows={2}
-              placeholder="Arabic text *"
-              required
-              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100 font-arabic"
-            />
-            <textarea
-              value={addForm.translation}
-              onChange={(e) => setAddForm((f) => ({ ...f, translation: e.target.value }))}
-              rows={2}
-              placeholder="Translation *"
-              required
-              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
-            />
-            <input
-              value={addForm.transliteration}
-              onChange={(e) => setAddForm((f) => ({ ...f, transliteration: e.target.value }))}
-              placeholder="Transliteration"
-              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
-            />
-            <textarea
-              value={addForm.commentary}
-              onChange={(e) => setAddForm((f) => ({ ...f, commentary: e.target.value }))}
-              rows={2}
-              placeholder="Commentary"
-              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
-            />
-            <select
-              value={addForm.category}
-              onChange={(e) => setAddForm((f) => ({ ...f, category: e.target.value }))}
-              required
-              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
-            >
-              <option value="">Select category *</option>
+            <div>
+              <label htmlFor="add-title" className="block text-sm text-slate-400 mb-1">Title *</label>
+              <input
+                id="add-title"
+                value={addForm.title}
+                onChange={(e) => setAddForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="Title"
+                required
+                className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
+              />
+            </div>
+            <div>
+              <label htmlFor="add-arabic" className="block text-sm text-slate-400 mb-1">Arabic text *</label>
+              <textarea
+                id="add-arabic"
+                value={addForm.arabic_text}
+                onChange={(e) => setAddForm((f) => ({ ...f, arabic_text: e.target.value }))}
+                dir="rtl"
+                rows={2}
+                placeholder="Arabic text"
+                required
+                className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100 font-arabic"
+              />
+            </div>
+            <div>
+              <label htmlFor="add-translation" className="block text-sm text-slate-400 mb-1">Translation *</label>
+              <textarea
+                id="add-translation"
+                value={addForm.translation}
+                onChange={(e) => setAddForm((f) => ({ ...f, translation: e.target.value }))}
+                rows={2}
+                placeholder="Translation"
+                required
+                className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
+              />
+            </div>
+            <div>
+              <label htmlFor="add-transliteration" className="block text-sm text-slate-400 mb-1">Transliteration</label>
+              <input
+                id="add-transliteration"
+                value={addForm.transliteration}
+                onChange={(e) => setAddForm((f) => ({ ...f, transliteration: e.target.value }))}
+                placeholder="Transliteration"
+                className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
+              />
+            </div>
+            <div>
+              <label htmlFor="add-commentary" className="block text-sm text-slate-400 mb-1">Commentary</label>
+              <textarea
+                id="add-commentary"
+                value={addForm.commentary}
+                onChange={(e) => setAddForm((f) => ({ ...f, commentary: e.target.value }))}
+                rows={2}
+                placeholder="Commentary"
+                className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
+              />
+            </div>
+            <div>
+              <label htmlFor="add-category" className="block text-sm text-slate-400 mb-1">Category *</label>
+              <select
+                id="add-category"
+                value={addForm.category}
+                onChange={(e) => setAddForm((f) => ({ ...f, category: e.target.value }))}
+                required
+                className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
+              >
+                <option value="">Select category</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.name}>{c.name}</option>
               ))}
-            </select>
-            <input
-              value={addForm.source}
-              onChange={(e) => setAddForm((f) => ({ ...f, source: e.target.value }))}
-              placeholder="Source (e.g. Bukhari 1234)"
-              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
-            />
+              </select>
+            </div>
+            <div>
+              <label htmlFor="add-source" className="block text-sm text-slate-400 mb-1">Source</label>
+              <input
+                id="add-source"
+                value={addForm.source}
+                onChange={(e) => setAddForm((f) => ({ ...f, source: e.target.value }))}
+                placeholder="e.g. Bukhari 1234"
+                className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
+              />
+            </div>
             <button
               type="submit"
               disabled={addStatus === "loading"}
@@ -447,9 +496,10 @@ export default function AdminDashboardPage() {
                     <button
                       type="button"
                       onClick={saveEdit}
-                      className="px-4 py-2 rounded-lg bg-green-600/80 text-white hover:bg-green-600 transition-colors"
+                      disabled={!!actionId}
+                      className="px-4 py-2 rounded-lg bg-green-600/80 text-white hover:bg-green-600 transition-colors disabled:opacity-50"
                     >
-                      Save
+                      {actionId === dua.id ? "Saving…" : "Save"}
                     </button>
                     <button
                       type="button"
@@ -491,7 +541,8 @@ export default function AdminDashboardPage() {
                     <button
                       type="button"
                       onClick={() => startEdit(dua)}
-                      className="px-3 py-1.5 text-sm rounded-lg bg-slate-700/60 text-slate-200 hover:bg-slate-600/60 transition-colors"
+                      disabled={!!actionId}
+                      className="px-3 py-1.5 text-sm rounded-lg bg-slate-700/60 text-slate-200 hover:bg-slate-600/60 transition-colors disabled:opacity-50"
                     >
                       Edit
                     </button>
@@ -499,17 +550,19 @@ export default function AdminDashboardPage() {
                       <button
                         type="button"
                         onClick={() => approve(dua.id)}
-                        className="px-3 py-1.5 text-sm rounded-lg bg-green-600/80 text-white hover:bg-green-600 transition-colors"
+                        disabled={!!actionId}
+                        className="px-3 py-1.5 text-sm rounded-lg bg-green-600/80 text-white hover:bg-green-600 transition-colors disabled:opacity-50"
                       >
-                        Approve
+                        {actionId === dua.id ? "…" : "Approve"}
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => deleteDua(dua.id)}
-                      className="px-3 py-1.5 text-sm rounded-lg bg-red-600/80 text-white hover:bg-red-600 transition-colors"
+                      disabled={!!actionId}
+                      className="px-3 py-1.5 text-sm rounded-lg bg-red-600/80 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
                     >
-                      Delete
+                      {actionId === dua.id ? "…" : "Delete"}
                     </button>
                   </div>
                 </>

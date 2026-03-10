@@ -28,10 +28,7 @@ export async function GET(request: NextRequest) {
   try {
     const rows = await query(sql, params);
     return NextResponse.json(rows);
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Database error" },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
