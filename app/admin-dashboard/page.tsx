@@ -36,6 +36,18 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Dua>>({});
+  const [statusFilter, setStatusFilter] = useState<"pending" | "all">("pending");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState({
+    title: "",
+    arabic_text: "",
+    translation: "",
+    transliteration: "",
+    commentary: "",
+    source: "",
+    category: "",
+  });
+  const [addStatus, setAddStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   const checkAuth = useCallback(() => {
     setAuthenticated(!!getAuthPassword());
@@ -63,16 +75,16 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const fetchPending = useCallback(async () => {
+  const fetchDuas = useCallback(async () => {
     if (!getAuthPassword()) return;
     setLoading(true);
-    const res = await fetch("/api/admin/duas", { headers: authHeaders() });
+    const res = await fetch(`/api/admin/duas?status=${statusFilter}`, { headers: authHeaders() });
     const data = await res.json();
     if (res.ok && Array.isArray(data)) {
       setDuas(data);
     }
     setLoading(false);
-  }, []);
+  }, [statusFilter]);
 
   const fetchCategories = useCallback(async () => {
     if (!getAuthPassword()) return;
@@ -83,10 +95,10 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     if (authenticated) {
-      fetchPending();
+      fetchDuas();
       fetchCategories();
     }
-  }, [authenticated, fetchPending, fetchCategories]);
+  }, [authenticated, fetchDuas, fetchCategories]);
 
   const addCategory = async () => {
     if (!newCategoryName.trim()) return;
@@ -138,7 +150,7 @@ export default function AdminDashboardPage() {
     if (res.ok) {
       setEditingId(null);
       setEditForm({});
-      fetchPending();
+      fetchDuas();
     }
   };
 
@@ -148,16 +160,46 @@ export default function AdminDashboardPage() {
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ status: "Approved" }),
     });
-    if (res.ok) fetchPending();
+    if (res.ok) fetchDuas();
   };
 
-  const reject = async (id: string) => {
-    if (!confirm("Delete this submission?")) return;
+  const deleteDua = async (id: string) => {
+    if (!confirm("Delete this dua? This cannot be undone.")) return;
     const res = await fetch(`/api/admin/duas/${id}`, {
       method: "DELETE",
       headers: authHeaders(),
     });
-    if (res.ok) fetchPending();
+    if (res.ok) fetchDuas();
+  };
+
+  const handleAddDua = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addForm.title || !addForm.arabic_text || !addForm.translation || !addForm.category) return;
+    setAddStatus("loading");
+    try {
+      const res = await fetch("/api/admin/duas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          ...addForm,
+          transliteration: addForm.transliteration || undefined,
+          commentary: addForm.commentary || undefined,
+          source: addForm.source || undefined,
+        }),
+      });
+      if (res.ok) {
+        setAddForm({ title: "", arabic_text: "", translation: "", transliteration: "", commentary: "", source: "", category: "" });
+        setShowAddForm(false);
+        setAddStatus("success");
+        fetchDuas();
+      } else {
+        const data = await res.json();
+        setAddStatus("error");
+        alert(data.error || "Failed to add");
+      }
+    } catch {
+      setAddStatus("error");
+    }
   };
 
   if (!authenticated) {
@@ -254,12 +296,102 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
-      <h2 className="text-lg font-semibold text-slate-200 mb-4">Pending Duas</h2>
+      <section className="mb-10">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <h2 className="text-lg font-semibold text-slate-200">Duas</h2>
+          <div className="flex gap-2 items-center">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as "pending" | "all")}
+              className="px-3 py-1.5 text-sm rounded-lg bg-slate-800/60 text-slate-200 border border-slate-600 focus:border-cmu-red focus:outline-none"
+            >
+              <option value="pending">Pending only</option>
+              <option value="all">All duas</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => setShowAddForm((v) => !v)}
+              className="px-3 py-1.5 text-sm rounded-lg bg-cmu-red/80 text-white hover:bg-cmu-red transition-colors"
+            >
+              {showAddForm ? "Cancel" : "+ Add Dua"}
+            </button>
+          </div>
+        </div>
+
+        {showAddForm && (
+          <form onSubmit={handleAddDua} className="glass-card p-5 mb-6 space-y-3">
+            <h3 className="text-slate-200 font-medium">Add new dua</h3>
+            <input
+              value={addForm.title}
+              onChange={(e) => setAddForm((f) => ({ ...f, title: e.target.value }))}
+              placeholder="Title *"
+              required
+              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
+            />
+            <textarea
+              value={addForm.arabic_text}
+              onChange={(e) => setAddForm((f) => ({ ...f, arabic_text: e.target.value }))}
+              dir="rtl"
+              rows={2}
+              placeholder="Arabic text *"
+              required
+              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100 font-arabic"
+            />
+            <textarea
+              value={addForm.translation}
+              onChange={(e) => setAddForm((f) => ({ ...f, translation: e.target.value }))}
+              rows={2}
+              placeholder="Translation *"
+              required
+              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
+            />
+            <input
+              value={addForm.transliteration}
+              onChange={(e) => setAddForm((f) => ({ ...f, transliteration: e.target.value }))}
+              placeholder="Transliteration"
+              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
+            />
+            <textarea
+              value={addForm.commentary}
+              onChange={(e) => setAddForm((f) => ({ ...f, commentary: e.target.value }))}
+              rows={2}
+              placeholder="Commentary"
+              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
+            />
+            <select
+              value={addForm.category}
+              onChange={(e) => setAddForm((f) => ({ ...f, category: e.target.value }))}
+              required
+              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
+            >
+              <option value="">Select category *</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+            <input
+              value={addForm.source}
+              onChange={(e) => setAddForm((f) => ({ ...f, source: e.target.value }))}
+              placeholder="Source (e.g. Bukhari 1234)"
+              className="w-full px-3 py-2 rounded bg-slate-800/60 border border-slate-600 text-slate-100"
+            />
+            <button
+              type="submit"
+              disabled={addStatus === "loading"}
+              className="px-4 py-2 rounded-lg bg-green-600/80 text-white hover:bg-green-600 disabled:opacity-50 transition-colors"
+            >
+              {addStatus === "loading" ? "Adding…" : "Add Dua (Approved)"}
+            </button>
+          </form>
+        )}
+      </section>
 
       {loading ? (
         <p className="text-slate-400">Loading...</p>
       ) : duas.length === 0 ? (
-        <p className="text-slate-400 py-8">No pending submissions.</p>
+        <p className="text-slate-400 py-8">
+          {statusFilter === "pending" ? "No pending submissions." : "No duas found."}
+        </p>
       ) : (
         <div className="grid gap-6">
           {duas.map((dua) => (
@@ -330,9 +462,20 @@ export default function AdminDashboardPage() {
                 </div>
               ) : (
                 <>
-                  <span className="inline-block px-2 py-0.5 text-xs font-medium rounded bg-amber-600/30 text-amber-300 mb-2">
-                    {dua.category}
-                  </span>
+                  <div className="flex gap-2 items-center mb-2 flex-wrap">
+                    <span className="inline-block px-2 py-0.5 text-xs font-medium rounded bg-slate-600/60 text-slate-300">
+                      {dua.category}
+                    </span>
+                    <span
+                      className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${
+                        dua.status === "Approved"
+                          ? "bg-green-600/30 text-green-300"
+                          : "bg-amber-600/30 text-amber-300"
+                      }`}
+                    >
+                      {dua.status}
+                    </span>
+                  </div>
                   <h2 className="text-lg font-semibold text-slate-100 mb-2">{dua.title}</h2>
                   <p className="text-2xl text-right font-arabic mb-2 leading-loose" dir="rtl">
                     {dua.arabic_text}
@@ -352,19 +495,21 @@ export default function AdminDashboardPage() {
                     >
                       Edit
                     </button>
+                    {dua.status === "Pending" && (
+                      <button
+                        type="button"
+                        onClick={() => approve(dua.id)}
+                        className="px-3 py-1.5 text-sm rounded-lg bg-green-600/80 text-white hover:bg-green-600 transition-colors"
+                      >
+                        Approve
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => approve(dua.id)}
-                      className="px-3 py-1.5 text-sm rounded-lg bg-green-600/80 text-white hover:bg-green-600 transition-colors"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => reject(dua.id)}
+                      onClick={() => deleteDua(dua.id)}
                       className="px-3 py-1.5 text-sm rounded-lg bg-red-600/80 text-white hover:bg-red-600 transition-colors"
                     >
-                      Reject
+                      Delete
                     </button>
                   </div>
                 </>

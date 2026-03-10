@@ -6,7 +6,12 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "npx tsx scripts/seed-duas.ts",
+    "merge-categories": "npx tsx scripts/merge-categories.ts",
+    "dedupe-duas": "npx tsx scripts/dedupe-duas.ts",
+    "analyze-close-dupes": "npx tsx scripts/analyze-close-dupes.ts",
+    "merge-close-dupes": "npx tsx scripts/merge-close-dupes.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.6.2",

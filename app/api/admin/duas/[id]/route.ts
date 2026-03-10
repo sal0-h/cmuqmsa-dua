@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query, run, type Dua } from "@/lib/db";
+import { query, run } from "@/lib/db";
+import type { Dua } from "@/lib/db";
 
 function checkAdminAuth(request: NextRequest): boolean {
   const authHeader = request.headers.get("authorization");
@@ -62,7 +63,7 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    await query("DELETE FROM duas WHERE id = $1", [id]);
+    await run("DELETE FROM duas WHERE id = $1", [id]);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json(

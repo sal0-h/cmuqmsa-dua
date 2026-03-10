@@ -18,6 +18,46 @@ That's it. The SQLite database is created automatically at `data/duamaker.db` on
 
 3. **Optional:** Set `ADMIN_PASSWORD` in `.env.local` for the admin dashboard (default works for dev).
 
+4. **Seed built-in duas (Sunni only):**
+   ```bash
+   npm run seed
+   ```
+   Fetches from islamic-json (Bukhari, Muslim, etc.), Naikiyah API, and duas.com. Includes a Shia source blocklist.
+
+## Full seed & filter pipeline
+
+To seed and clean the database end-to-end:
+
+1. **Seed** – Load duas from all sources (Sunni only)
+   ```bash
+   npm run seed
+   ```
+
+2. **Merge categories** – Combine small categories (e.g. Morning + Evening → Daily Adhkar)
+   ```bash
+   npm run merge-categories
+   ```
+
+3. **Dedupe exact** – Remove identical duas (same Arabic text)
+   ```bash
+   npm run dedupe-duas
+   ```
+
+4. **Analyze close dupes** – Report similar duas (optional; review before merging)
+   ```bash
+   npm run analyze-close-dupes
+   ```
+
+5. **Merge close dupes** – Merge high-confidence near-duplicates (≥96% Arabic similarity)
+   ```bash
+   npm run merge-close-dupes
+   ```
+
+**One-liner:**
+```bash
+npm run seed && npm run merge-categories && npm run dedupe-duas && npm run analyze-close-dupes && npm run merge-close-dupes
+```
+
 ## Deployment (dua.cmuqmsa.org)
 
 ### Docker (recommended)
